@@ -8,7 +8,7 @@ import threading
 import os
 import json
 
-with open("env.json", "r") as f:
+with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "env.json"), "r") as f:
 	ENV = json.load(f)
 
 TOKEN = ENV["TOKEN"]
@@ -80,7 +80,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 			await browseInterface()
 		else:
 			if msg == "lock":
-				os.system("rundll32.exe user32.dll,LockWorkStation")
+				os.startfile("rundll32.exe", arguments="user32.dll,LockWorkStation")
 				await update.message.reply_text("PC locked.")
 			elif msg == "shut down":
 				await update.message.reply_text("Are you sure to shut down?", reply_markup=InlineKeyboardMarkup([[
@@ -146,7 +146,7 @@ def ui():
 	app = QApplication(sys.argv)
 	window = MainWindow()
 	tray_icon = QSystemTrayIcon()
-	tray_icon.setIcon(QIcon("icon.png"))
+	tray_icon.setIcon(QIcon(os.path.join(os.path.abspath(os.path.dirname(__file__)), "icon.png")))
 
 	menu = QMenu()
 
