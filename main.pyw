@@ -7,6 +7,7 @@ from telegram.ext import *
 import threading
 import os
 import json
+import time
 
 with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "env.json"), "r") as f:
 	ENV = json.load(f)
@@ -61,11 +62,14 @@ async def browseInterface():
 	dirs, files = browse()
 	if lastInterface:
 		await bot.edit_message_text("[closed file browsing]", CHATID, lastInterface.message_id)
-	lastInterface = await bot.send_message(CHATID, f"`{path}`", reply_markup=InlineKeyboardMarkup(
+	lastInterface = await bot.send_message(CHATID, f"`{path}`".replace("\\", "\\\\"), parse_mode="MarkdownV2", reply_markup=InlineKeyboardMarkup(
 		[[InlineKeyboardButton(f"📂 ..", callback_data="..")]] + \
 		[[InlineKeyboardButton(f"📂 {dir}", callback_data=dir)] for dir in dirs] + \
 		[[InlineKeyboardButton(f"📄 {file}", callback_data=file)] for file in files]
 	))
+
+def restartBot():
+	os.execv(sys.executable, [sys.executable] + sys.argv)
 
 async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 	global environment, drives, path
@@ -94,7 +98,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 				]]))
 			elif msg == "restart bot":
 				await update.message.reply_text("Restarting bot ...")
-				os.execv(sys.executable, [sys.executable] + sys.argv)
+				restartBot()
 			elif msg == "get file":
 				environment = "FILE"
 				await update.message.reply_text("Entered file browsing mode.", reply_markup=ReplyKeyboardMarkup([
@@ -123,13 +127,13 @@ async def query(update: Update, context: ContextTypes.DEFAULT_TYPE):
 		elif os.path.exists(newPath):
 			path = newPath
 			if os.path.isfile(path):
-				await query.edit_message_text(f"`{path}`", reply_markup=InlineKeyboardMarkup([
+				await query.edit_message_text(f"Do you wish to access `{path}`?".replace("\\", "\\\\"), parse_mode="MarkdownV2", reply_markup=InlineKeyboardMarkup([
 					[InlineKeyboardButton("Yes", callback_data="file/yes")],
 					[InlineKeyboardButton("No", callback_data="file/no")]
 	  			]))
 				return
 		dirs, files = browse()
-		await query.edit_message_text(f"`{path}`", reply_markup=InlineKeyboardMarkup(
+		await query.edit_message_text(f"`{path}`".replace("\\", "\\\\"), parse_mode="MarkdownV2", reply_markup=InlineKeyboardMarkup(
 			[[InlineKeyboardButton(f"📂 ..", callback_data="..")]] + \
 			[[InlineKeyboardButton(f"📂 {dir}", callback_data=dir)] for dir in dirs] + \
 			[[InlineKeyboardButton(f"📄 {file}", callback_data=file)] for file in files]
@@ -139,10 +143,10 @@ async def query(update: Update, context: ContextTypes.DEFAULT_TYPE):
 			await query.edit_message_text("Canceled.")
 		elif ans == "shutdown":
 			await query.edit_message_text("Shutting down.")
-			os.system("shutdown /s")
+			os.system("shutdown /s /t 0")
 		elif ans == "reboot":
 			await query.edit_message_text("Rebooting ...")
-			os.system("shutdown /r")
+			os.system("shutdown /r /t 0")
 
 def ui():
 	app = QApplication(sys.argv)
@@ -154,7 +158,10 @@ def ui():
 
 	quit_action = QAction("Quit")
 	quit_action.triggered.connect(app.quit)
+	restart_action = QAction("Restart bot")
+	restart_action.triggered.connect(restartBot)
 	menu.addAction(quit_action)
+	menu.addAction(restart_action)
 
 	tray_icon.setContextMenu(menu)
 	tray_icon.activated.connect(lambda reason: window.show() if reason == QSystemTrayIcon.ActivationReason.Trigger else None)
@@ -169,4 +176,6 @@ application = Application.builder().token(TOKEN).build()
 application.post_init = menu
 application.add_handler(MessageHandler(filters.ALL, handle))
 application.add_handler(CallbackQueryHandler(query))
-application.run_polling()
+while 1:
+	try: application.run_polling()
+	except: time.sleep(5)
