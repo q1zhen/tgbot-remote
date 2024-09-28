@@ -139,8 +139,10 @@ async def query(update: Update, context: ContextTypes.DEFAULT_TYPE):
 			await query.edit_message_text("Canceled.")
 		elif ans == "shutdown":
 			await query.edit_message_text("Shutting down.")
+			os.system("shutdown /s")
 		elif ans == "reboot":
 			await query.edit_message_text("Rebooting ...")
+			os.system("shutdown /r")
 
 def ui():
 	app = QApplication(sys.argv)
